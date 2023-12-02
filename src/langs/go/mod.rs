@@ -1,14 +1,9 @@
 pub mod go {
-    use crate::server_compiler::server_compilers::{Compiler, Route};
+    use crate::server_compiler::server_compilers::ServerCompiler;
 
-    pub struct GoAeroCompiler();
-
-    impl Compiler for GoAeroCompiler {
-        fn create_router_code<'a>(routes: &'a [Route], code: &'a str) -> &'a str {
-            for route in routes {
-                println!("{}", route);
-            }
-            return code;
-        }
+    pub fn get_lang() -> ServerCompiler {
+        let mut lang = ServerCompiler::new("golang");
+        lang.set_file_extension("go");
+        lang
     }
 }
