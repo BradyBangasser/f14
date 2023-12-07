@@ -1,33 +1,43 @@
 mod default_formatter;
-mod default_generate_router_code;
 mod default_get_routes;
-mod default_error_handler;
 mod default_writer;
+pub mod get_file_data;
 
 pub mod server_compilers {
     use std::path::Path;
+    use anyhow::{Result, anyhow};
 
     use super::{
         default_formatter::default_formatter,
-        default_generate_router_code::default_generate_router_code,
-        default_get_routes::default_get_routes, default_writer::default_writer, default_error_handler::default_error_handler,
+        default_get_routes::default_get_routes, default_writer::default_writer, get_file_data::FileData,
     };
+
+    #[derive(strum_macros::Display, strum_macros::EnumString, Debug, Clone)]
+    pub enum Methods {
+        GET,
+        POST,
+        Unknown(String),
+    }
 
     #[derive(Clone)]
     pub struct Route {
-        method: String,
+        method: Methods,
         path: String,
     }
 
     impl Route {
-        pub fn new(method: &str, path: &Path) -> Self {
+        pub fn new(method: Methods, path: &Path) -> Self {
             Route {
-                method: method.to_string().to_uppercase(),
+                method,
                 path: path
                     .to_str()
                     .expect("Path couldn't be converted to string")
                     .to_string(),
             }
+        }
+
+        pub fn from_file_data(data: FileData) -> Self {
+            Self::new(data.method, &Path::new(&data.router_path))
         }
     }
 
@@ -40,55 +50,52 @@ pub mod server_compilers {
     #[derive(Clone)]
     pub struct ServerCompiler {
         language: String,
-        get_routes: fn(&str) -> Result<Vec<Route>, String>, // This many need to have a customer error type
-        generate_router_code: fn(Vec<Route>) -> Result<Vec<String>, String>, // And this too
-        formatter: fn(Vec<String>) -> Result<String, String>, // And this
-        error_handler: fn(String),
-        writer: fn(String, &str),
+        // Get all of the routes that the compiler will need to generate code for
+        get_routes: fn(&Self, &Path) -> Result<Vec<Route>>, // This many need to have a customer error type I spelled custom wrong
+        generate_router_code: Option<fn(&Self, Vec<Route>) -> Result<Vec<String>>>, // And this too
+        formatter: fn(&Self, Vec<String>) -> Result<String>, // And this
+        writer: fn(&Self, String, &Path),
         pub file_extension: Option<String>,
-        pub detect: Option<fn(&str) -> bool>
+        pub detect: Option<fn(&str) -> bool>,
     }
 
     impl ServerCompiler {
-        pub fn compile(&self, path: &str) {
-            let routes = (&self.get_routes)(path);
-            
-            if routes.is_err() {
-                (self.error_handler)(routes.err().unwrap());
-                return
+        pub fn compile(&self, path: &Path) -> Result<bool> {
+            let routes = (&self.get_routes)(self, path)?;
+
+            if self.generate_router_code.is_none() {
+                return Err(anyhow!("Couldn't generate router code because generate_router_code function is not defined"));
             }
 
-            let code_vector = (&self.generate_router_code)(routes.unwrap());
+            let code_vector = (&self.generate_router_code.unwrap())(self, routes)?;
 
-            if code_vector.is_err() {
-                (self.error_handler)(code_vector.err().unwrap());
-                return
-            }
-            let code = (&self.formatter)(code_vector.unwrap());
+            let code = (&self.formatter)(self, code_vector)?;
 
-            if code.is_err() {
-                (self.error_handler)(code.err().unwrap());
-                return
-            }
+            (&self.writer)(self, code, path);
 
-            (&self.writer)(code.unwrap(), path);
+            return Ok(true)
         }
 
         pub fn new(lang_name: &str) -> Self {
             ServerCompiler {
                 language: lang_name.to_uppercase().to_string(),
                 get_routes: default_get_routes,
-                generate_router_code: default_generate_router_code,
                 formatter: default_formatter,
                 writer: default_writer,
-                error_handler: default_error_handler,
+                generate_router_code: None,
                 file_extension: None,
                 detect: None,
             }
         }
 
-        pub fn set_file_extension(&mut self, extension: &str) {
+        pub fn set_file_extension(&mut self, extension: &str) -> &mut Self {
             self.file_extension = Some(extension.to_string());
+            self
+        }
+
+        pub fn set_code_generator(&mut self, func: fn(&ServerCompiler, Vec<Route>) -> Result<Vec<String>>) -> &mut Self {
+            self.generate_router_code = Some(func);
+            self
         }
     }
 
@@ -97,7 +104,7 @@ pub mod server_compilers {
             f.write_fmt(format_args!("{}", &self.language))
         }
     }
-    
+
     impl std::fmt::Debug for ServerCompiler {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.write_fmt(format_args!("{}", &self.language))

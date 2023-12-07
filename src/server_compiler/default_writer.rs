@@ -1,3 +1,6 @@
-pub fn default_writer(code: String, p: &str) {
-    println!("{}, {}", code, p);
+use std::path::Path;
+
+use super::server_compilers::ServerCompiler;
+
+pub fn default_writer(_sc: &ServerCompiler, code: String, _p: &Path) {
 }

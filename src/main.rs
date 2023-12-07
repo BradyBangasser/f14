@@ -17,10 +17,10 @@ fn main() {
     ]);
 
     let matches = cmd.get_matches();
-    let test = matches.get_one::<String>("test").expect("No Test?");
+    let _test = matches.get_one::<String>("test").expect("No Test?");
 
     lang::register_default_langs();
     let selected_lang = lang::detect_lang("test/go/main.go").ok().expect("No language could be loaded");
-    selected_lang.compile("test/go");
-    println!("{}", test)
+    let result = selected_lang.compile(Path::new("test/go/routes"));
+    println!("{:?}", result)
 }

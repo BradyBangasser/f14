@@ -35,14 +35,14 @@ pub mod langs {
         for lang in registered_langs {
             if lang.detect.is_some() {
                 if lang.detect.unwrap()(main_file_path) {
-                    unsafe { SELECTED_LANG = Some(lang.clone()) }
+                    set_lang(&lang);
                     return Ok(lang.clone());
                 }
             } else {
                 let lang_ext = lang.clone().file_extension.expect("All langs must have a file extention or detector function");
 
                 if lang_ext == extention {
-                    unsafe { SELECTED_LANG = Some(lang.clone()) }
+                    set_lang(&lang);
                     return Ok(lang.clone());
                 }
             }
@@ -51,7 +51,7 @@ pub mod langs {
         Err("Could not auto detect language".to_string())
     }
 
-    pub fn set_lang(lang: ServerCompiler) {
+    pub fn set_lang(lang: &ServerCompiler) {
         unsafe { SELECTED_LANG = Some(lang.clone()) }
     }
 
