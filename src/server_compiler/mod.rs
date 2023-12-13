@@ -6,6 +6,16 @@ pub mod get_file_data;
 pub mod server_compilers {
     use std::path::Path;
     use anyhow::{Result, anyhow};
+    use regex::Regex;
+
+    pub fn create_safe_file_variable(fpath: &str) -> String {
+        let re = Regex::new(r"[^a-zA-Z0-9_]").unwrap();
+        let ending_re = Regex::new(r"_$").unwrap();
+
+        let sfv = fpath.to_string();
+
+        ending_re.replace_all(&re.replace_all(&sfv, "_").to_string(), "").into()
+    }
 
     use super::{
         default_formatter::default_formatter,
@@ -39,6 +49,9 @@ pub mod server_compilers {
         pub fn from_file_data(data: FileData) -> Self {
             Self::new(data.method, &Path::new(&data.router_path))
         }
+
+        pub fn get_path(&self) -> String { self.path.clone() }
+        pub fn get_method(&self) -> Methods { self.method.clone() }
     }
 
     impl std::fmt::Display for Route {
