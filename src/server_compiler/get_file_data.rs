@@ -1,4 +1,4 @@
-use std::{fs::Metadata, path::Path};
+use std::{fs::Metadata, path::Path, str::FromStr};
 
 use anyhow::{Context, Result};
 
@@ -44,7 +44,9 @@ pub fn get_file_data(parent_path: &Path, child_path: &Path) -> Result<FileData> 
 
     let metadata = child_path.metadata()?;
 
-    let method: Methods = Methods::GET;
+    let method_str = f_name_str.replace(&format!(".{}", f_ext), "");
+
+    let method = Methods::from_str(&method_str).unwrap_or(Methods::Unknown(method_str));
 
     Ok(FileData {
         file_name: String::from(f_name_str),

@@ -2,9 +2,10 @@ mod default_formatter;
 mod default_get_routes;
 mod default_writer;
 pub mod get_file_data;
+pub mod multiply_string;
 
 pub mod server_compilers {
-    use std::path::Path;
+    use std::{path::Path, cmp};
     use anyhow::{Result, anyhow};
     use regex::Regex;
 
@@ -22,17 +23,29 @@ pub mod server_compilers {
         default_get_routes::default_get_routes, default_writer::default_writer, get_file_data::FileData,
     };
 
-    #[derive(strum_macros::Display, strum_macros::EnumString, Debug, Clone)]
+    #[derive(strum_macros::Display, strum_macros::EnumString, Debug, Clone, PartialEq, cmp::Ord, cmp::PartialOrd, cmp::Eq)]
     pub enum Methods {
         GET,
         POST,
         Unknown(String),
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq, cmp::PartialOrd, cmp::Eq)]
     pub struct Route {
         method: Methods,
         path: String,
+    }
+
+    impl Ord for Route {
+        fn cmp(&self, other: &Self) -> cmp::Ordering {
+            self.get_path().cmp(&other.get_path())
+        }
+    }
+
+    impl std::fmt::Debug for Route {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Route").field("method", &self.method).field("path", &self.path).finish()
+        }
     }
 
     impl Route {
@@ -67,9 +80,10 @@ pub mod server_compilers {
         get_routes: fn(&Self, &Path) -> Result<Vec<Route>>, // This many need to have a customer error type I spelled custom wrong
         generate_router_code: Option<fn(&Self, Vec<Route>) -> Result<Vec<String>>>, // And this too
         formatter: fn(&Self, Vec<String>) -> Result<String>, // And this
-        writer: fn(&Self, String, &Path),
+        writer: fn(&Self, String, &Path) -> Result<bool>,
         pub file_extension: Option<String>,
         pub detect: Option<fn(&str) -> bool>,
+        ignored_file_names: Vec<String>
     }
 
     impl ServerCompiler {
@@ -84,7 +98,8 @@ pub mod server_compilers {
 
             let code = (&self.formatter)(self, code_vector)?;
 
-            (&self.writer)(self, code, path);
+            println!("{}", path.display());
+            (&self.writer)(self, code, &path.join("build.go"))?;
 
             return Ok(true)
         }
@@ -98,6 +113,7 @@ pub mod server_compilers {
                 generate_router_code: None,
                 file_extension: None,
                 detect: None,
+                ignored_file_names: vec![],
             }
         }
 
@@ -109,6 +125,15 @@ pub mod server_compilers {
         pub fn set_code_generator(&mut self, func: fn(&ServerCompiler, Vec<Route>) -> Result<Vec<String>>) -> &mut Self {
             self.generate_router_code = Some(func);
             self
+        }
+
+        pub fn set_ignored_files(&mut self, ifv: Vec<String>) -> &mut Self {
+            self.ignored_file_names = ifv;
+            self
+        }
+
+        pub fn get_ignored_files(&self) -> &Vec<String> {
+            &self.ignored_file_names
         }
     }
 
