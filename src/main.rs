@@ -1,4 +1,5 @@
-mod server_compiler;
+pub mod server_compiler;
+pub mod client_compiler;
 mod langs;
 pub mod f14fs;
 
@@ -22,5 +23,11 @@ fn main() {
     lang::register_default_langs();
     let selected_lang = lang::detect_lang("test/go/main.go").ok().expect("No language could be loaded");
     let result = selected_lang.compile(Path::new("test/go/routes"));
-    println!("{:?}", result)
+
+    if result.is_ok() {
+        println!("Build Success!");
+    } else {
+        println!("Build Failed: {}", result.err().unwrap());
+    }
 }
+
