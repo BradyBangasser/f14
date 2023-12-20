@@ -1,0 +1,1 @@
+# This folder will be used to create server client projects for testing
