@@ -22,11 +22,11 @@ fn main() {
     // let _test = matches.get_one::<String>("test").expect("No Test?");
 
     lang::register_default_langs();
-    let selected_lang = lang::detect_lang("test/go/main.go").ok().expect("No language could be loaded");
-    let result = selected_lang.compile(Path::new("test/go/routes"));
+    let selected_lang = lang::detect_lang("test/server/go/main.go").ok().expect("No language could be loaded");
+    let result = selected_lang.compile(Path::new("test/server/go/routes"));
 
     let cc = ClientCompiler::new("test", "ls", [String::from("-a")]);
-    let client_result = cc.exe();
+    let client_result = cc.exe(true, true, "log");
 
     if client_result.is_ok() {
         println!("Client Build Success, result:\n{}", client_result.unwrap());

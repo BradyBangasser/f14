@@ -10,6 +10,7 @@ pub fn default_get_routes(sc: &ServerCompiler, p: &Path) -> Result<Vec<Route>> {
     let mut routes: Vec<Route> = vec![];
     let files = f14fs::read_dir(p);
 
+    println!("impl error handling here");
     let unwrapped_files = files.unwrap();
 
 
