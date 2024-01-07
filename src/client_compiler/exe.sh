@@ -1,49 +1,31 @@
-# !/usr/bin/env sh
+# !usr/bin/env sh
 
-# framework cli cmd, subcmd, dev mode, start server
+# Params 
+# build command, run command, working directory
 
-echo "Starting client build" 
+buildCmd=$1
+runCmd=$2
+wd=$3
 
-frameworkCli=$1
-subcmd=$2
-devMode=$3
-startServer=$4
-
-# if devMode != false
-# set devMode to true
-if [ "$devMode" != "false" ]; then 
-    devMode="true"
+if [ "$wd" == "" ]; then 
+    # cd client
+    echo h
+else 
+    cd $wd || (echo "CD failed"; exit)
 fi
 
-# if startServer != false
-# set startServer to true
-if [ "$startServer" != "false" ]; then 
-    startServer="true"
+if [ "$buildCmd" == "" ]; then
+    echo "Build Command is not valid"
+    exit
 fi 
 
-# fix this
-# if frameworkCli == false
-if [ "$frameworkCli" == "false" ]; then
-    # attempt to create router for the src dir
+TIMEFORMAT="%R"
 
-    if node src/client_compiler/createClientRouter.js; then
-        echo if
-    else
-        echo else
-    fi
-fi
+echo "Starting Project build: $buildCmd"
+start=$(date +%s%N)
+eval $buildCmd
+end=$(date +%s%N)
 
-# if subcmd == ""
-# attempt to run, but add extra warning message if it fails
-if [ "$subcmd" == "" ]; then
-    echo here
-fi
-
-# Attempt to exec the build script 
-if eval ""; then
-    echo success
-else 
-    echo "fail"
-fi
-
-echo $frameworkCli this
+echo "Res: $(($end-$start)))"
+echo "Starting Client Server"
+eval $runCmd
